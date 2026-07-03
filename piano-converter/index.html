@@ -6,6 +6,7 @@
             font-family: Arial, sans-serif;
             margin: 20px;
             background-color: #f5f5f5;
+            touch-action: manipulation;
         }
         .container {
             max-width: 1200px;
@@ -120,6 +121,7 @@
             font-weight: bold;
             cursor: pointer;
             position: relative;
+            transition: background 0.05s ease;
         }
         .key-number {
             font-size: 18px;
@@ -162,6 +164,7 @@
             padding: 8px 3px;
             font-weight: bold;
             cursor: pointer;
+            transition: background 0.05s ease;
         }
         .black-key .key-number {
             font-size: 14px;
@@ -331,7 +334,7 @@
                     } else if (westernToIndian[note]) {
                         convertedNotes.push(westernToIndian[note]);
                     } else {
-                        convertedNotes.push(note); // Keep as is if not found
+                        convertedNotes.push(note);
                     }
                 }
                 
@@ -506,6 +509,24 @@
             openPrintableResult(input, result);
         }
         
+        function setupKeyEventListeners(keyElement, note) {
+            // Click handler
+            keyElement.addEventListener('click', (e) => {
+                e.preventDefault();
+                playNote(note);
+            });
+            
+            // Touch handlers for low-latency mobile response
+            keyElement.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                playNote(note);
+            }, { passive: false });
+            
+            keyElement.addEventListener('touchend', (e) => {
+                e.preventDefault();
+            }, { passive: false });
+        }
+        
         function createPianoKeyboard() {
             const pianoContainer = document.getElementById('pianoContainer');
             const whiteKeysContainer = document.getElementById('whiteKeys');
@@ -548,7 +569,6 @@
                 key.className = 'white-key';
                 key.dataset.note = keyData.note;
                 key.dataset.key = keyData.key;
-                key.onclick = () => playNote(keyData.note);
                 
                 const numberDiv = document.createElement('div');
                 numberDiv.className = 'key-number';
@@ -568,6 +588,7 @@
                 key.appendChild(bindingDiv);
                 
                 whiteKeysContainer.appendChild(key);
+                setupKeyEventListeners(key, keyData.note);
             });
             
             blackKeyData.forEach(keyData => {
@@ -577,7 +598,6 @@
                 key.style.left = ((keyData.whiteKeyIndex * 56) - 16) + 'px';
                 key.dataset.note = keyData.note;
                 key.dataset.key = keyData.key;
-                key.onclick = () => playNote(keyData.note);
                 
                 const numberDiv = document.createElement('div');
                 numberDiv.className = 'key-number';
@@ -597,6 +617,7 @@
                 key.appendChild(bindingDiv);
                 
                 blackKeysContainer.appendChild(key);
+                setupKeyEventListeners(key, keyData.note);
             });
         }
         
