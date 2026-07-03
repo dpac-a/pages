@@ -30,7 +30,6 @@
       margin-bottom: 12px;
     }
 
-    /* ── player panels ── */
     .players {
       display: flex;
       gap: 20px;
@@ -103,7 +102,6 @@
     .turn-banner.p1 { background: rgba(77,171,247,0.25); color: #74c0fc; }
     .turn-banner.p2 { background: rgba(247,131,172,0.25); color: #faa2c1; }
 
-    /* ── hud strip ── */
     .hud {
       display: flex;
       gap: 30px;
@@ -156,7 +154,6 @@
       transform: translateY(0);
     }
 
-    /* ── grid ── */
     .board {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
@@ -165,7 +162,6 @@
       width: 100%;
     }
 
-    /* ── card ── */
     .card {
       aspect-ratio: 1;
       perspective: 600px;
@@ -198,7 +194,6 @@
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
     }
 
-    /* back of card */
     .card-back {
       background: linear-gradient(135deg, #232526, #414345);
       border: 2px solid rgba(255, 255, 255, 0.08);
@@ -213,13 +208,11 @@
       color: rgba(255, 215, 0, 0.3);
     }
 
-    /* front of card — colour assigned per fruit */
     .card-front {
       transform: rotateY(180deg);
       border: 2px solid rgba(255, 255, 255, 0.25);
     }
 
-    /* matched glow — colour per player */
     .card.matched-p1 .card-inner {
       box-shadow: 0 0 0 3px #4dabf7, 0 0 18px #4dabf7aa;
     }
@@ -239,7 +232,6 @@
       100% { transform: scale(1); }
     }
 
-    /* ── win overlay ── */
     .overlay {
       display: none;
       position: fixed;
@@ -285,10 +277,7 @@
   </style>
 </head>
 <body>
-
   <h1>🍉 Fruit Memory 🍉</h1>
-
-  <!-- player panels -->
   <div class="players">
     <div class="player-panel p1 active-turn" id="panel1">
       <div class="p-name">🔵 Player 1</div>
@@ -301,28 +290,14 @@
       <div class="p-label">pairs</div>
     </div>
   </div>
-
   <div class="turn-banner p1" id="turnBanner">Player 1's Turn</div>
-
   <div class="hud">
-    <div class="hud-box">
-      <div class="label">Moves</div>
-      <div class="value" id="moves">0</div>
-    </div>
-    <div class="hud-box">
-      <div class="label">Pairs left</div>
-      <div class="value" id="matches">18</div>
-    </div>
-    <div class="hud-box">
-      <div class="label">Time</div>
-      <div class="value" id="timer">0s</div>
-    </div>
+    <div class="hud-box"><div class="label">Moves</div><div class="value" id="moves">0</div></div>
+    <div class="hud-box"><div class="label">Pairs left</div><div class="value" id="matches">18</div></div>
+    <div class="hud-box"><div class="label">Time</div><div class="value" id="timer">0s</div></div>
   </div>
-
   <button class="btn" id="restartBtn">New Game</button>
-
   <div class="board" id="board"></div>
-
   <div class="overlay" id="overlay">
     <div class="win-box">
       <h2 id="winTitle">🎉 Game Over!</h2>
@@ -330,7 +305,22 @@
       <button class="btn" id="playAgainBtn">Play Again</button>
     </div>
   </div>
-
-  <script src="script.js"></script>
+  <script>
+    const FRUITS = [{emoji:'🍎',color:'#ff6b6b',bg:'#3d0000'},{emoji:'🍊',color:'#ffa94d',bg:'#3d1a00'},{emoji:'🥭',color:'#ffd43b',bg:'#2d2200'},{emoji:'🍌',color:'#f7f7a0',bg:'#2a2700'},{emoji:'🍇',color:'#cc5de8',bg:'#280038'},{emoji:'🍓',color:'#ff8787',bg:'#3d0015'},{emoji:'🍉',color:'#69db7c',bg:'#003d12'},{emoji:'🍍',color:'#e9c46a',bg:'#2d1f00'},{emoji:'🍑',color:'#ffb8b8',bg:'#3d1500'},{emoji:'🍒',color:'#f03e3e',bg:'#3d0000'},{emoji:'🍋',color:'#fff176',bg:'#2a2700'},{emoji:'🍐',color:'#a9e34b',bg:'#1a2d00'},{emoji:'🥝',color:'#74c869',bg:'#072a00'},{emoji:'🥥',color:'#d4a96a',bg:'#2a1500'},{emoji:'🫐',color:'#748ffc',bg:'#00083d'},{emoji:'🍈',color:'#63e6be',bg:'#003d28'},{emoji:'🥑',color:'#94d82d',bg:'#152600'},{emoji:'🍅',color:'#ff6348',bg:'#3d1000'}];
+    let firstCard=null,secondCard=null,locked=false,moves=0,matchCount=0,startTime=null,timerInterval=null,currentPlayer=0;
+    const scores=[0,0],PLAYER_NAMES=['Player 1','Player 2'],PANEL_CLASSES=['p1','p2'],MATCH_CLASSES=['matched-p1','matched-p2'];
+    const boardEl=document.getElementById('board'),movesEl=document.getElementById('moves'),matchesEl=document.getElementById('matches'),timerEl=document.getElementById('timer'),overlay=document.getElementById('overlay'),winStats=document.getElementById('winStats'),winTitle=document.getElementById('winTitle'),turnBanner=document.getElementById('turnBanner'),panel1=document.getElementById('panel1'),panel2=document.getElementById('panel2'),score1El=document.getElementById('score1'),score2El=document.getElementById('score2');
+    document.getElementById('restartBtn').addEventListener('click',startGame);
+    document.getElementById('playAgainBtn').addEventListener('click',startGame);
+    function updateTurnUI(){panel1.classList.toggle('active-turn',currentPlayer===0);panel2.classList.toggle('active-turn',currentPlayer===1);turnBanner.textContent=PLAYER_NAMES[currentPlayer]+"'s Turn";turnBanner.className='turn-banner '+PANEL_CLASSES[currentPlayer];}
+    function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}
+    return b;}
+    function startGame(){firstCard=null;secondCard=null;locked=false;moves=0;matchCount=0;scores[0]=0;scores[1]=0;currentPlayer=0;movesEl.textContent='0';matchesEl.textContent='18';timerEl.textContent='0s';score1El.textContent='0';score2El.textContent='0';overlay.classList.remove('active');clearInterval(timerInterval);startTime=null;updateTurnUI();const deck=shuffle([...FRUITS,...FRUITS]);boardEl.innerHTML='';deck.forEach((fruit,i)=>{const card=document.createElement('div');card.className='card';card.dataset.emoji=fruit.emoji;card.innerHTML=`<div class="card-inner"><div class="card-face card-back"></div><div class="card-face card-front" style="background:${fruit.bg}; color:${fruit.color};">${fruit.emoji}</div></div>`;card.addEventListener('click',onCardClick);boardEl.appendChild(card);});}
+    function onCardClick(e){const card=e.currentTarget;if(locked||card.classList.contains('flipped')||card.classList.contains('matched-p1')||card.classList.contains('matched-p2'))return;if(!startTime){startTime=Date.now();timerInterval=setInterval(()=>{timerEl.textContent=Math.floor((Date.now()-startTime)/1000)+'s';},500);}
+    card.classList.add('flipped');if(!firstCard){firstCard=card;return;}
+    secondCard=card;locked=true;moves++;movesEl.textContent=moves;if(firstCard.dataset.emoji===secondCard.dataset.emoji){matchCount++;scores[currentPlayer]++;score1El.textContent=scores[0];score2El.textContent=scores[1];matchesEl.textContent=18-matchCount;firstCard.classList.add(MATCH_CLASSES[currentPlayer]);secondCard.classList.add(MATCH_CLASSES[currentPlayer]);firstCard=null;secondCard=null;locked=false;if(matchCount===18){clearInterval(timerInterval);const elapsed=Math.floor((Date.now()-startTime)/1000);setTimeout(()=>{let title,stats;if(scores[0]>scores[1]){title='🏆 Player 1 Wins!';stats=`Player 1: ${scores[0]} pairs · Player 2: ${scores[1]} pairs — ${moves} moves in ${elapsed}s`;}else if(scores[1]>scores[0]){title='🏆 Player 2 Wins!';stats=`Player 2: ${scores[1]} pairs · Player 1: ${scores[0]} pairs — ${moves} moves in ${elapsed}s`;}else{title="🤝 It's a Tie!";stats=`Both players got ${scores[0]} pairs — ${moves} moves in ${elapsed}s`;}
+    winTitle.textContent=title;winStats.textContent=stats;overlay.classList.add('active');},500);}}else{setTimeout(()=>{firstCard.classList.remove('flipped');secondCard.classList.remove('flipped');firstCard=null;secondCard=null;locked=false;currentPlayer=currentPlayer===0?1:0;updateTurnUI();},900);}}
+    startGame();
+  </script>
 </body>
 </html>
