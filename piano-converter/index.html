@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-section {
+            margin-bottom: 20px;
+        }
+        .notation-selector {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .notation-selector h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 16px;
+        }
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .radio-option input[type="radio"] {
+            margin: 0;
+        }
+        .radio-option label {
+            font-size: 14px;
+            color: #555;
+            cursor: pointer;
+        }
+        .example-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            font-style: italic;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .results-section {
+            display: none;
+            margin-top: 30px;
+        }
+        .piano-container {
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        .converter-result {
+            width: 100%;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 5px;
+            border: 2px solid #ddd;
+        }
+        .piano-keyboard {
+            position: relative;
+            background: #333;
+            padding: 20px;
+            border-radius: 10px;
+            user-select: none;
+        }
+        .white-keys {
+            display: flex;
+            gap: 2px;
+        }
+        .white-key {
+            width: 50px;
+            height: 250px;
+            background: white;
+            border: 2px solid #333;
+            border-radius: 0 0 5px 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 15px 5px 10px 5px;
+            font-weight: bold;
+            cursor: pointer;
+            position: relative;
+        }
+        .key-number {
+            font-size: 18px;
+            margin-top: 160px;
+        }
+        .key-note {
+            font-size: 14px;
+            color: #666;
+            margin-top: 20px;
+        }
+        .key-binding {
+            font-size: 11px;
+            color: #999;
+            margin-top: auto;
+        }
+        .white-key:hover {
+            background: #f0f0f0;
+        }
+        .white-key.active {
+            background: #ddd !important;
+            transform: translateY(2px);
+        }
+        .black-keys {
+            position: absolute;
+            top: 20px;
+            display: flex;
+            gap: 2px;
+        }
+        .black-key {
+            width: 32px;
+            height: 130px;
+            background: #333;
+            border: 2px solid #666;
+            border-radius: 0 0 3px 3px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 3px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .black-key .key-number {
+            font-size: 14px;
+            margin-top: 60px;
+        }
+        .black-key .key-note {
+            font-size: 10px;
+            color: #ccc;
+        }
+        .black-key .key-binding {
+            font-size: 9px;
+            color: #aaa;
+        }
+        .black-key:hover {
+            background: #555;
+        }
+        .black-key.active {
+            background: #777 !important;
+            transform: translateY(2px);
+        }
+        .keyboard-help {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        .audio-status {
+            margin-top: 10px;
+            font-size: 11px;
+            color: #888;
+            text-align: center;
+        }
+        .hidden {
+            display: none;
+        }
+        .dot-above {
+            position: relative;
+        }
+        .dot-above::before {
+            content: "•";
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8px;
+        }
+        .dot-below {
+            position: relative;
+        }
+        .dot-below::after {
+            content: "•";
+            position: absolute;
+            bottom: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8px;
+        }
+        .note-line {
+            font-family: monospace;
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 5px;
+            line-height: 1.5;
+        }
+        .number-line {
+            font-family: monospace;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Piano Converter</h1>
+        <div class="form-section" id="formSection">
+            <div class="notation-selector">
+                <h3>Choose Input Notation:</h3>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="indianNotation" name="notationType" value="indian" checked>
+                        <label for="indianNotation">Indian Notation (S R G m P D N)</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="westernNotation" name="notationType" value="western">
+                        <label for="westernNotation">Western Notation (C D E F G A B)</label>
+                    </div>
+                </div>
+                <div class="example-text" id="notationExample">
+                    Example: S2 R2 G2 m2 P2 D2 N2 S3 (octaves 1-3 supported)
+                </div>
+            </div>
+            <textarea id="textInput" placeholder="Enter piano notes (e.g., S2 R2 G2)..."></textarea>
+            <button onclick="submitInput()">Convert</button>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <button onclick="goBack()">Go Back</button>
+            <button onclick="printResults()">Print</button>
+            
+            <div class="piano-container" id ="pianoContainer">
+                <h3>Piano Keyboard:</h3>
+                <div class="piano-keyboard">
+                    <div class="white-keys" id="whiteKeys"></div>
+                    <div class="black-keys" id="blackKeys"></div>
+                </div>
+                <div class="keyboard-help">
+                    Play with computer keys: Tab Q W E R T Y U I O P [ ] \ for white keys<br>
+                    2 3 4 5 6 7 8 9 0 for black keys (positioned between white keys)
+                </div>
+                <div class="audio-status" id="audioStatus">
+                    Click any key to enable audio
+                </div>
+            </div>
+            
+            <div class="converter-result">
+                <h3>Conversion Result:</h3>
+                <div id="output"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
