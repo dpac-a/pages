@@ -1,21 +1,698 @@
-<!DOCTYPE html><html><head><style>body{font-family:Arial,sans-serif;margin:20px;background-color:#f5f5f5;}.container{max-width:1200px;margin:0 auto;background:white;padding:20px;border-radius:10px;}h1{text-align:center;color:#333;margin-bottom:30px;}.form-section{margin-bottom:20px;}.notation-selector{margin-bottom:15px;padding:15px;background:#f9f9f9;border-radius:5px;border:1px solid #ddd;}.notation-selector h3{margin:0 0 10px 0;color:#333;font-size:16px;}.radio-group{display:flex;gap:20px;flex-wrap:wrap;}.radio-option{display:flex;align-items:center;gap:8px;}.radio-option input[type=radio]{margin:0;}.radio-option label{font-size:14px;color:#555;cursor:pointer;}.example-text{font-size:12px;color:#666;margin-top:8px;font-style:italic;}textarea{width:100%;height:150px;padding:10px;border:2px solid #ddd;border-radius:5px;font-family:monospace;box-sizing:border-box;}button{background-color:#4CAF50;color:white;padding:12px 25px;border:none;border-radius:5px;cursor:pointer;font-size:16px;margin:10px 5px;}button:hover{background-color:#45a049;}.results-section{display:none;margin-top:30px;}.piano-container{width:100%;margin-bottom:30px;}.converter-result{width:100%;background:#f9f9f9;padding:20px;border-radius:5px;border:2px solid #ddd;}.piano-keyboard{position:relative;background:#333;padding:20px;border-radius:10px;user-select:none;}.white-keys{display:flex;gap:2px;}.white-key{width:50px;height:250px;background:white;border:2px solid #333;border-radius:0 0 5px 5px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:15px 5px 10px 5px;font-weight:bold;cursor:pointer;position:relative;}.key-number{font-size:18px;margin-top:160px;}.key-note{font-size:14px;color:#666;margin-top:20px;}.key-binding{font-size:11px;color:#999;margin-top:auto;}.white-key:hover{background:#f0f0f0;}.white-key.active{background:#ddd!important;transform:translateY(2px);}.black-keys{position:absolute;top:20px;display:flex;gap:2px;}.black-key{width:32px;height:130px;background:#333;border:2px solid #666;border-radius:0 0 3px 3px;color:white;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:8px 3px;font-weight:bold;cursor:pointer;}.black-key .key-number{font-size:14px;margin-top:60px;}.black-key .key-note{font-size:10px;color:#ccc;}.black-key .key-binding{font-size:9px;color:#aaa;}.black-key:hover{background:#555;}.black-key.active{background:#777!important;transform:translateY(2px);}.keyboard-help{margin-top:15px;font-size:12px;color:#666;text-align:center;}.audio-status{margin-top:10px;font-size:11px;color:#888;text-align:center;}.hidden{display:none;}.dot-above{position:relative;}.dot-above::before{content:"•";position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:8px;}.dot-below{position:relative;}.dot-below::after{content:"•";position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);font-size:8px;}.note-line{font-family:monospace;font-size:16px;color:#333;margin-bottom:5px;line-height:1.5;}.number-line{font-family:monospace;font-size:18px;font-weight:bold;margin-bottom:15px;line-height:1.5;}</style></head><body><div class="container"><h1>Piano Converter</h1><div class="form-section" id="formSection"><div class="notation-selector"><h3>Choose Input Notation:</h3><div class="radio-group"><div class="radio-option"><input type="radio" id="indianNotation" name="notationType" value="indian" checked><label for="indianNotation">Indian Notation (S R G m P D N)</label></div><div class="radio-option"><input type="radio" id="westernNotation" name="notationType" value="western"><label for="westernNotation">Western Notation (C D E F G A B)</label></div></div><div class="example-text" id="notationExample">Example: S2 R2 G2 m2 P2 D2 N2 S3 (octaves 1-3 supported)</div></div><textarea id="textInput" placeholder="Enter piano notes (e.g., S2 R2 G2)..."></textarea><button onclick="submitInput()">Convert</button></div><div class="results-section" id="resultsSection"><button onclick="goBack()">Go Back</button> <button onclick="printResults()">Print</button><div class="piano-container" id="pianoContainer"><h3>Piano Keyboard:</h3><div class="piano-keyboard"><div class="white-keys" id="whiteKeys"></div><div class="black-keys" id="blackKeys"></div></div><div class="keyboard-help">Play with computer keys: Tab Q W E R T Y U I O P [ ] \\ for white keys<br>2 3 4 5 6 7 8 9 0 for black keys (positioned between white keys)</div><div class="audio-status" id="audioStatus">Click any key to enable audio</div></div><div class="converter-result"><h3>Conversion Result:</h3><div id="output"></div></div></div></div><script>let audioContext,isAudioEnabled=false;const westernToIndian={'C1':'S1','C#1':'r1','Db1':'r1','D1':'R1','D#1':'g1','Eb1':'g1','E1':'G1','F1':'m1','F#1':'M1','Gb1':'M1','G1':'P1','G#1':'d1','Ab1':'d1','A1':'D1','A#1':'n1','Bb1':'n1','B1':'N1','C2':'S2','C#2':'r2','Db2':'r2','D2':'R2','D#2':'g2','Eb2':'g2','E2':'G2','F2':'m2','F#2':'M2','Gb2':'M2','G2':'P2','G#2':'d2','Ab2':'d2','A2':'D2','A#2':'n2','Bb2':'n2','B2':'N2','C3':'S3','C#3':'r3','Db3':'r3','D3':'R3','D#3':'g3','Eb3':'g3','E3':'G3','F3':'m3','F#3':'M3','Gb3':'M3','G3':'P3','G#3':'d3','Ab3':'d3','A3':'D3','A#3':'n3','Bb3':'n3','B3':'N3'};function convertWesternToIndian(input){const lines=input.trim().split('\n');let convertedLines=[];for(let line of lines){const notes=line.trim().split(/\s+/);let convertedNotes=[];for(let note of notes){if(note==='-'){convertedNotes.push('-');}else if(westernToIndian[note]){convertedNotes.push(westernToIndian[note]);}else{convertedNotes.push(note);}}
-    convertedLines.push(convertedNotes.join(' '));}
-    return convertedLines.join('\n');}
-    const noteFrequencies={'P1':196.00,'D1':220.00,'N1':246.94,'S2':261.63,'R2':293.66,'G2':329.63,'m2':349.23,'P2':392.00,'D2':440.00,'N2':493.88,'S3':523.25,'R3':587.33,'G3':659.25,'m3':698.46,'d1':207.65,'n1':233.08,'r2':277.18,'g2':311.13,'M2':369.99,'d2':415.30,'n2':466.16,'r3':554.37,'g3':622.25};function initAudio(){if(!isAudioEnabled){audioContext=new(window.AudioContext||window.webkitAudioContext)();isAudioEnabled=true;document.getElementById('audioStatus').textContent='Audio enabled - Play away!';}}
-    function playAudioNote(note){if(!isAudioEnabled||!noteFrequencies[note])return;const osc=audioContext.createOscillator(),gain=audioContext.createGain();osc.connect(gain);gain.connect(audioContext.destination);osc.frequency.setValueAtTime(noteFrequencies[note],audioContext.currentTime);osc.type='sine';gain.gain.setValueAtTime(0.3,audioContext.currentTime);gain.gain.exponentialRampToValueAtTime(0.01,audioContext.currentTime+0.5);osc.start(audioContext.currentTime);osc.stop(audioContext.currentTime+0.5);}
-    function processText(inputString){const noteMapping={"P1":{number:"1",color:"Orange"},"D1":{number:"2",color:"Red"},"N1":{number:"3",color:"HotPink"},"d1":{number:"1",color:"black"},"n1":{number:"2",color:"black"},"S2":{number:"4",color:"Purple"},"R2":{number:"5",color:"Indigo"},"G2":{number:"6",color:"DeepSkyBlue"},"m2":{number:"7",color:"Green"},"P2":{number:"8",color:"Orange"},"D2":{number:"9",color:"Red"},"N2":{number:"10",color:"HotPink"},"r2":{number:"3",color:"black"},"g2":{number:"4",color:"black"},"M2":{number:"5",color:"black"},"d2":{number:"6",color:"black"},"n2":{number:"7",color:"black"},"S3":{number:"11",color:"Purple"},"R3":{number:"12",color:"Indigo"},"G3":{number:"13",color:"DeepSkyBlue"},"m3":{number:"14",color:"Green"},"r3":{number:"8",color:"black"},"g3":{number:"9",color:"black"}};function convertToDotNotation(note){const match=note.match(/([SRGmPDNrgMdn])([123])/);if(!match)return note;const[,letter,octave]=match;if(octave==='1'){return`<span class=\"dot-below\">${letter}</span>`;}else if(octave==='2'){return letter;}else if(octave==='3'){return`<span class=\"dot-above\">${letter}</span>`;}return note;}
-    const lines=inputString.trim().split('\n');let result="";for(let line of lines){const notes=line.trim().split(/\s+/);let noteRow="",numberRow="";for(let note of notes){if(noteMapping[note]){const mapping=noteMapping[note],dotNote=convertToDotNotation(note);noteRow+=`${dotNote}  `;numberRow+=`<span style=\"color:${mapping.color}\">${mapping.number}</span>  `;}else if(note==="-"){noteRow+="-  ";numberRow+="-  ";}else if(note.trim()!==""){noteRow+=note+"  ";numberRow+=note+"  ";}}
-    if(noteRow.trim()!==""){result+='<div class="note-line">'+noteRow.trim()+'</div>';result+='<div class="number-line">'+numberRow.trim()+'</div>';result+='<br>';}}
-    return result.trim();}
-    document.addEventListener('DOMContentLoaded',function(){const radioButtons=document.querySelectorAll('input[name="notationType"]'),exampleText=document.getElementById('notationExample'),textInput=document.getElementById('textInput');radioButtons.forEach(radio=>{radio.addEventListener('change',function(){if(this.value==='indian'){exampleText.textContent='Example: S2 R2 G2 m2 P2 D2 N2 S3 (octaves 1-3 supported)';textInput.placeholder='Enter piano notes (e.g., S2 R2 G2)...';}else{exampleText.textContent='Example: C2 D2 E2 F2 G2 A2 B2 C3 (supports #/b for sharps/flats)';textInput.placeholder='Enter piano notes (e.g., C2 D2 E2)...';}}});});});function submitInput(){const input=document.getElementById('textInput').value,notationType=document.querySelector('input[name="notationType"]:checked').value;if(!input.trim()){alert('Please enter some piano notes first!');return;}
-    let processedInput=input;if(notationType==='western'){processedInput=convertWesternToIndian(input);}
-    const result=processText(processedInput);document.getElementById('formSection').classList.add('hidden');document.getElementById('resultsSection').style.display='block';document.getElementById('output').innerHTML=result.replace(/\n/g,'<br>');createPianoKeyboard();}
-    function goBack(){document.getElementById('formSection').classList.remove('hidden');document.getElementById('resultsSection').style.display='none';}
-    function printResults(){const input=document.getElementById('textInput').value,result=document.getElementById('output').innerHTML;openPrintableResult(input,result);}
-    function createPianoKeyboard(){const pianoContainer=document.getElementById('pianoContainer'),whiteKeysContainer=document.getElementById('whiteKeys'),blackKeysContainer=document.getElementById('blackKeys');whiteKeysContainer.innerHTML='';blackKeysContainer.innerHTML='';const whiteKeyData=[{number:'1',color:'Orange',note:'P1',displayNote:'<span class=\"dot-below\">P</span>',key:'Tab',keyDisplay:'Tab'},{number:'2',color:'Red',note:'D1',displayNote:'<span class=\"dot-below\">D</span>',key:'q',keyDisplay:'Q'},{number:'3',color:'HotPink',note:'N1',displayNote:'<span class=\"dot-below\">N</span>',key:'w',keyDisplay:'W'},{number:'4',color:'Purple',note:'S2',displayNote:'S',key:'e',keyDisplay:'E'},{number:'5',color:'Indigo',note:'R2',displayNote:'R',key:'r',keyDisplay:'R'},{number:'6',color:'DeepSkyBlue',note:'G2',displayNote:'G',key:'t',keyDisplay:'T'},{number:'7',color:'Green',note:'m2',displayNote:'m',key:'y',keyDisplay:'Y'},{number:'8',color:'Orange',note:'P2',displayNote:'P',key:'u',keyDisplay:'U'},{number:'9',color:'Red',note:'D2',displayNote:'D',key:'i',keyDisplay:'I'},{number:'10',color:'HotPink',note:'N2',displayNote:'N',key:'o',keyDisplay:'O'},{number:'11',color:'Purple',note:'S3',displayNote:'<span class=\"dot-above\">S</span>',key:'p',keyDisplay:'P'},{number:'12',color:'Indigo',note:'R3',displayNote:'<span class=\"dot-above\">R</span>',key:'[',keyDisplay:'['},{number:'13',color:'DeepSkyBlue',note:'G3',displayNote:'<span class=\"dot-above\">G</span>',key:']',keyDisplay:']'},{number:'14',color:'Green',note:'m3',displayNote:'<span class=\"dot-above\">m</span>',key:'\\',keyDisplay:'\\'}],blackKeyData=[{number:'1',note:'d1',displayNote:'<span class=\"dot-below\">d</span>',key:'1',keyDisplay:'1',whiteKeyIndex:1},{number:'2',note:'n1',displayNote:'<span class=\"dot-below\">n</span>',key:'2',keyDisplay:'2',whiteKeyIndex:2},{number:'3',note:'r2',displayNote:'r',key:'4',keyDisplay:'4',whiteKeyIndex:4},{number:'4',note:'g2',displayNote:'g',key:'5',keyDisplay:'5',whiteKeyIndex:5},{number:'5',note:'M2',displayNote:'M',key:'7',keyDisplay:'7',whiteKeyIndex:7},{number:'6',note:'d2',displayNote:'d',key:'8',keyDisplay:'8',whiteKeyIndex:8},{number:'7',note:'n2',displayNote:'n',key:'9',keyDisplay:'9',whiteKeyIndex:9},{number:'8',note:'r3',displayNote:'<span class=\"dot-above\">r</span>',key:'-',keyDisplay:'-',whiteKeyIndex:11},{number:'9',note:'g3',displayNote:'<span class=\"dot-above\">g</span>',key:'=',keyDisplay:'=',whiteKeyIndex:12}];whiteKeyData.forEach(keyData=>{const key=document.createElement('div');key.className='white-key';key.dataset.note=keyData.note;key.dataset.key=keyData.key;key.onclick=()=>playNote(keyData.note);const numberDiv=document.createElement('div');numberDiv.className='key-number';numberDiv.style.color=keyData.color;numberDiv.textContent=keyData.number;const noteDiv=document.createElement('div');noteDiv.className='key-note';noteDiv.innerHTML=keyData.displayNote;const bindingDiv=document.createElement('div');bindingDiv.className='key-binding';bindingDiv.textContent=keyData.keyDisplay;key.appendChild(numberDiv);key.appendChild(noteDiv);key.appendChild(bindingDiv);whiteKeysContainer.appendChild(key);});blackKeyData.forEach(keyData=>{const key=document.createElement('div');key.className='black-key';key.style.position='absolute';key.style.left=((keyData.whiteKeyIndex*56)-16)+'px';key.dataset.note=keyData.note;key.dataset.key=keyData.key;key.onclick=()=>playNote(keyData.note);const numberDiv=document.createElement('div');numberDiv.className='key-number';numberDiv.style.color='white';numberDiv.textContent=keyData.number;const noteDiv=document.createElement('div');noteDiv.className='key-note';noteDiv.innerHTML=keyData.displayNote;const bindingDiv=document.createElement('div');bindingDiv.className='key-binding';bindingDiv.textContent=keyData.keyDisplay;key.appendChild(numberDiv);key.appendChild(noteDiv);key.appendChild(bindingDiv);blackKeysContainer.appendChild(key);});}
-    function playNote(note){if(!isAudioEnabled){initAudio();}
-    playAudioNote(note);const keys=document.querySelectorAll(`[data-note="${note}"]`);keys.forEach(key=>{key.classList.add('active');setTimeout(()=>key.classList.remove('active'),150);});}
-    document.addEventListener('keydown',function(event){if(document.getElementById('resultsSection').style.display!=='block')return;let key=event.key;if(event.code==='Tab'){event.preventDefault();key='Tab';}else{key=key.toLowerCase();}
-    const keyElement=document.querySelector(`[data-key="${key}"]`);if(keyElement){event.preventDefault();const note=keyElement.dataset.note;playNote(note);}});function convertInputNotation(inputLine){return inputLine.replace(/([SRGmPDNrgMdn])([123])/g,function(match,letter,octave){if(octave==='1'){return'<span class=\"dot-below\">'+letter+'</span>';}else if(octave==='2'){return letter;}else if(octave==='3'){return'<span class=\"dot-above\">'+letter+'</span>';}return match;});}
-    function openPrintableResult(originalInput,convertedResult){const newWindow=window.open('','_blank');const lines=originalInput.trim().split('\n'),resultLines=convertedResult.trim().split('\n');let mergedContent="";for(let i=0;i<lines.length;i++){const inputLine=lines[i]||"",outputLine=resultLines[i]||"";if(inputLine.trim()!==""){const convertedInputLine=convertInputNotation(inputLine);mergedContent+='<div class=\"line-pair\">';mergedContent+='<div class=\"input-line\">'+convertedInputLine+'</div>';mergedContent+='<div class=\"output-line\">'+outputLine+'</div>';mergedContent+='</div>';}}
-    newWindow.document.write('<!DOCTYPE html><html><head><title>Piano Converter Result</title><style>body{font-family:Arial,sans-serif;margin:20px;line-height:1.6;}h1{color:#333;text-align:center;margin-bottom:30px;}.line-pair{margin:15px 0;padding:10px;border:1px solid #ddd;border-radius:5px;background-color:#f9f9f9;}.input-line{font-family:monospace;color:#555;margin-bottom:8px;line-height:2;}.output-line{font-size:18px;font-weight:bold;}.dot-above{position:relative;}.dot-above::before{content:"•";position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:8px;}.dot-below{position:relative;}.dot-below::after{content:"•";position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);font-size:8px;}@media print{body{margin:15px;}.line-pair{break-inside:avoid;}}</style></head><body><h1>Piano Converter Result</h1>'+mergedContent+'</body></html>');newWindow.document.close();}</script></body></html>
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-section {
+            margin-bottom: 20px;
+        }
+        .notation-selector {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .notation-selector h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 16px;
+        }
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .radio-option input[type="radio"] {
+            margin: 0;
+        }
+        .radio-option label {
+            font-size: 14px;
+            color: #555;
+            cursor: pointer;
+        }
+        .example-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            font-style: italic;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .results-section {
+            display: none;
+            margin-top: 30px;
+        }
+        .piano-container {
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        .converter-result {
+            width: 100%;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 5px;
+            border: 2px solid #ddd;
+        }
+        .piano-keyboard {
+            position: relative;
+            background: #333;
+            padding: 20px;
+            border-radius: 10px;
+            user-select: none;
+        }
+        .white-keys {
+            display: flex;
+            gap: 2px;
+        }
+        .white-key {
+            width: 50px;
+            height: 250px;
+            background: white;
+            border: 2px solid #333;
+            border-radius: 0 0 5px 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 15px 5px 10px 5px;
+            font-weight: bold;
+            cursor: pointer;
+            position: relative;
+        }
+        .key-number {
+            font-size: 18px;
+            margin-top: 160px;
+        }
+        .key-note {
+            font-size: 14px;
+            color: #666;
+            margin-top: 20px;
+        }
+        .key-binding {
+            font-size: 11px;
+            color: #999;
+            margin-top: auto;
+        }
+        .white-key:hover {
+            background: #f0f0f0;
+        }
+        .white-key.active {
+            background: #ddd !important;
+            transform: translateY(2px);
+        }
+        .black-keys {
+            position: absolute;
+            top: 20px;
+            display: flex;
+            gap: 2px;
+        }
+        .black-key {
+            width: 32px;
+            height: 130px;
+            background: #333;
+            border: 2px solid #666;
+            border-radius: 0 0 3px 3px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 3px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .black-key .key-number {
+            font-size: 14px;
+            margin-top: 60px;
+        }
+        .black-key .key-note {
+            font-size: 10px;
+            color: #ccc;
+        }
+        .black-key .key-binding {
+            font-size: 9px;
+            color: #aaa;
+        }
+        .black-key:hover {
+            background: #555;
+        }
+        .black-key.active {
+            background: #777 !important;
+            transform: translateY(2px);
+        }
+        .keyboard-help {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        .audio-status {
+            margin-top: 10px;
+            font-size: 11px;
+            color: #888;
+            text-align: center;
+        }
+        .hidden {
+            display: none;
+        }
+        .dot-above {
+            position: relative;
+        }
+        .dot-above::before {
+            content: "•";
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8px;
+        }
+        .dot-below {
+            position: relative;
+        }
+        .dot-below::after {
+            content: "•";
+            position: absolute;
+            bottom: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8px;
+        }
+        .note-line {
+            font-family: monospace;
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 5px;
+            line-height: 1.5;
+        }
+        .number-line {
+            font-family: monospace;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Piano Converter</h1>
+        <div class="form-section" id="formSection">
+            <div class="notation-selector">
+                <h3>Choose Input Notation:</h3>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="indianNotation" name="notationType" value="indian" checked>
+                        <label for="indianNotation">Indian Notation (S R G m P D N)</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="westernNotation" name="notationType" value="western">
+                        <label for="westernNotation">Western Notation (C D E F G A B)</label>
+                    </div>
+                </div>
+                <div class="example-text" id="notationExample">
+                    Example: S2 R2 G2 m2 P2 D2 N2 S3 (octaves 1-3 supported)
+                </div>
+            </div>
+            <textarea id="textInput" placeholder="Enter piano notes (e.g., S2 R2 G2)..."></textarea>
+            <button onclick="submitInput()">Convert</button>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <button onclick="goBack()">Go Back</button>
+            <button onclick="printResults()">Print</button>
+            
+            <div class="piano-container" id ="pianoContainer">
+                <h3>Piano Keyboard:</h3>
+                <div class="piano-keyboard">
+                    <div class="white-keys" id="whiteKeys"></div>
+                    <div class="black-keys" id="blackKeys"></div>
+                </div>
+                <div class="keyboard-help">
+                    Play with computer keys: Tab Q W E R T Y U I O P [ ] \ for white keys<br>
+                    2 3 4 5 6 7 8 9 0 for black keys (positioned between white keys)
+                </div>
+                <div class="audio-status" id="audioStatus">
+                    Click any key to enable audio
+                </div>
+            </div>
+            
+            <div class="converter-result">
+                <h3>Conversion Result:</h3>
+                <div id="output"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Audio context for playing notes
+        let audioContext;
+        let isAudioEnabled = false;
+        
+        // Western to Indian notation mapping
+        const westernToIndian = {
+            'C1': 'S1', 'C#1': 'r1', 'Db1': 'r1',
+            'D1': 'R1', 'D#1': 'g1', 'Eb1': 'g1', 
+            'E1': 'G1',
+            'F1': 'm1', 'F#1': 'M1', 'Gb1': 'M1',
+            'G1': 'P1', 'G#1': 'd1', 'Ab1': 'd1',
+            'A1': 'D1', 'A#1': 'n1', 'Bb1': 'n1',
+            'B1': 'N1',
+            
+            'C2': 'S2', 'C#2': 'r2', 'Db2': 'r2',
+            'D2': 'R2', 'D#2': 'g2', 'Eb2': 'g2',
+            'E2': 'G2', 
+            'F2': 'm2', 'F#2': 'M2', 'Gb2': 'M2',
+            'G2': 'P2', 'G#2': 'd2', 'Ab2': 'd2',
+            'A2': 'D2', 'A#2': 'n2', 'Bb2': 'n2',
+            'B2': 'N2',
+            
+            'C3': 'S3', 'C#3': 'r3', 'Db3': 'r3',
+            'D3': 'R3', 'D#3': 'g3', 'Eb3': 'g3',
+            'E3': 'G3',
+            'F3': 'm3', 'F#3': 'M3', 'Gb3': 'M3',
+            'G3': 'P3', 'G#3': 'd3', 'Ab3': 'd3',
+            'A3': 'D3', 'A#3': 'n3', 'Bb3': 'n3',
+            'B3': 'N3'
+        };
+        
+        function convertWesternToIndian(input) {
+            const lines = input.trim().split('\n');
+            let convertedLines = [];
+            
+            for (let line of lines) {
+                const notes = line.trim().split(/\s+/);
+                let convertedNotes = [];
+                
+                for (let note of notes) {
+                    if (note === '-') {
+                        convertedNotes.push('-');
+                    } else if (westernToIndian[note]) {
+                        convertedNotes.push(westernToIndian[note]);
+                    } else {
+                        convertedNotes.push(note); // Keep as is if not found
+                    }
+                }
+                
+                convertedLines.push(convertedNotes.join(' '));
+            }
+            
+            return convertedLines.join('\n');
+        }
+        
+        // Note frequencies (in Hz) for our piano keys
+        const noteFrequencies = {
+            'P1': 196.00, 'D1': 220.00, 'N1': 246.94,
+            'S2': 261.63, 'R2': 293.66, 'G2': 329.63, 'm2': 349.23,
+            'P2': 392.00, 'D2': 440.00, 'N2': 493.88,
+            'S3': 523.25, 'R3': 587.33, 'G3': 659.25, 'm3': 698.46,
+            'd1': 207.65, 'n1': 233.08, 'r2': 277.18, 'g2': 311.13,
+            'M2': 369.99, 'd2': 415.30, 'n2': 466.16, 'r3': 554.37, 'g3': 622.25
+        };
+        
+        function initAudio() {
+            if (!isAudioEnabled) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                isAudioEnabled = true;
+                document.getElementById('audioStatus').textContent = 'Audio enabled - Play away!';
+            }
+        }
+        
+        function playAudioNote(note) {
+            if (!isAudioEnabled || !noteFrequencies[note]) return;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(noteFrequencies[note], audioContext.currentTime);
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        }
+
+        function processText(inputString) {
+            const noteMapping = {
+                "P1": { number: "1", color: "Orange" },
+                "D1": { number: "2", color: "Red" },
+                "N1": { number: "3", color: "HotPink" },
+                "d1": { number: "1", color: "black" },
+                "n1": { number: "2", color: "black" },
+                "S2": { number: "4", color: "Purple" },
+                "R2": { number: "5", color: "Indigo" },
+                "G2": { number: "6", color: "DeepSkyBlue" },
+                "m2": { number: "7", color: "Green" },
+                "P2": { number: "8", color: "Orange" },
+                "D2": { number: "9", color: "Red" },
+                "N2": { number: "10", color: "HotPink" },
+                "r2": { number: "3", color: "black" },
+                "g2": { number: "4", color: "black" },
+                "M2": { number: "5", color: "black" },
+                "d2": { number: "6", color: "black" },
+                "n2": { number: "7", color: "black" },
+                "S3": { number: "11", color: "Purple" },
+                "R3": { number: "12", color: "Indigo" },
+                "G3": { number: "13", color: "DeepSkyBlue" },
+                "m3": { number: "14", color: "Green" },
+                "r3": { number: "8", color: "black" },
+                "g3": { number: "9", color: "black" }
+            };
+
+            function convertToDotNotation(note) {
+                const match = note.match(/([SRGmPDNrgMdn])([123])/);
+                if (!match) return note;
+                
+                const [, letter, octave] = match;
+                if (octave === '1') {
+                    return `<span class="dot-below">${letter}</span>`;
+                } else if (octave === '2') {
+                    return letter;
+                } else if (octave === '3') {
+                    return `<span class="dot-above">${letter}</span>`;
+                }
+                return note;
+            }
+
+            const lines = inputString.trim().split('\n');
+            let result = "";
+
+            for (let line of lines) {
+                const notes = line.trim().split(/\s+/);
+                let noteRow = "";
+                let numberRow = "";
+                
+                for (let note of notes) {
+                    if (noteMapping[note]) {
+                        const mapping = noteMapping[note];
+                        const dotNote = convertToDotNotation(note);
+                        noteRow += `${dotNote}  `;
+                        numberRow += `<span style="color: ${mapping.color}">${mapping.number}</span>  `;
+                    } else if (note === "-") {
+                        noteRow += "-  ";
+                        numberRow += "-  ";
+                    } else if (note.trim() !== "") {
+                        noteRow += note + "  ";
+                        numberRow += note + "  ";
+                    }
+                }
+                
+                if (noteRow.trim() !== "") {
+                    result += '<div class="note-line">' + noteRow.trim() + '</div>';
+                    result += '<div class="number-line">' + numberRow.trim() + '</div>';
+                    result += '<br>';
+                }
+            }
+
+            return result.trim();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const radioButtons = document.querySelectorAll('input[name="notationType"]');
+            const exampleText = document.getElementById('notationExample');
+            const textInput = document.getElementById('textInput');
+            
+            radioButtons.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.value === 'indian') {
+                        exampleText.textContent = 'Example: S2 R2 G2 m2 P2 D2 N2 S3 (octaves 1-3 supported)';
+                        textInput.placeholder = 'Enter piano notes (e.g., S2 R2 G2)...';
+                    } else {
+                        exampleText.textContent = 'Example: C2 D2 E2 F2 G2 A2 B2 C3 (supports #/b for sharps/flats)';
+                        textInput.placeholder = 'Enter piano notes (e.g., C2 D2 E2)...';
+                    }
+                });
+            });
+        });
+        
+        function submitInput() {
+            const input = document.getElementById('textInput').value;
+            const notationType = document.querySelector('input[name="notationType"]:checked').value;
+            
+            if (!input.trim()) {
+                alert('Please enter some piano notes first!');
+                return;
+            }
+            
+            let processedInput = input;
+            if (notationType === 'western') {
+                processedInput = convertWesternToIndian(input);
+            }
+            
+            const result = processText(processedInput);
+            
+            document.getElementById('formSection').classList.add('hidden');
+            document.getElementById('resultsSection').style.display = 'block';
+            
+            document.getElementById('output').innerHTML = result.replace(/\n/g, '<br>');
+            
+            createPianoKeyboard();
+        }
+        
+        function goBack() {
+            document.getElementById('formSection').classList.remove('hidden');
+            document.getElementById('resultsSection').style.display = 'none';
+        }
+        
+        function printResults() {
+            const input = document.getElementById('textInput').value;
+            const result = document.getElementById('output').innerHTML;
+            openPrintableResult(input, result);
+        }
+        
+        function createPianoKeyboard() {
+            const pianoContainer = document.getElementById('pianoContainer');
+            const whiteKeysContainer = document.getElementById('whiteKeys');
+            const blackKeysContainer = document.getElementById('blackKeys');
+            
+            whiteKeysContainer.innerHTML = '';
+            blackKeysContainer.innerHTML = '';
+            
+            const whiteKeyData = [
+                { number: '1', color: 'Orange', note: 'P1', displayNote: '<span class="dot-below">P</span>', key: 'Tab', keyDisplay: 'Tab' },
+                { number: '2', color: 'Red', note: 'D1', displayNote: '<span class="dot-below">D</span>', key: 'q', keyDisplay: 'Q' },
+                { number: '3', color: 'HotPink', note: 'N1', displayNote: '<span class="dot-below">N</span>', key: 'w', keyDisplay: 'W' },
+                { number: '4', color: 'Purple', note: 'S2', displayNote: 'S', key: 'e', keyDisplay: 'E' },
+                { number: '5', color: 'Indigo', note: 'R2', displayNote: 'R', key: 'r', keyDisplay: 'R' },
+                { number: '6', color: 'DeepSkyBlue', note: 'G2', displayNote: 'G', key: 't', keyDisplay: 'T' },
+                { number: '7', color: 'Green', note: 'm2', displayNote: 'm', key: 'y', keyDisplay: 'Y' },
+                { number: '8', color: 'Orange', note: 'P2', displayNote: 'P', key: 'u', keyDisplay: 'U' },
+                { number: '9', color: 'Red', note: 'D2', displayNote: 'D', key: 'i', keyDisplay: 'I' },
+                { number: '10', color: 'HotPink', note: 'N2', displayNote: 'N', key: 'o', keyDisplay: 'O' },
+                { number: '11', color: 'Purple', note: 'S3', displayNote: '<span class="dot-above">S</span>', key: 'p', keyDisplay: 'P' },
+                { number: '12', color: 'Indigo', note: 'R3', displayNote: '<span class="dot-above">R</span>', key: '[', keyDisplay: '[' },
+                { number: '13', color: 'DeepSkyBlue', note: 'G3', displayNote: '<span class="dot-above">G</span>', key: ']', keyDisplay: ']' },
+                { number: '14', color: 'Green', note: 'm3', displayNote: '<span class="dot-above">m</span>', key: '\\', keyDisplay: '\\' }
+            ];
+            
+            const blackKeyData = [
+                { number: '1', note: 'd1', displayNote: '<span class="dot-below">d</span>', key: '1', keyDisplay: '1', whiteKeyIndex: 1 },
+                { number: '2', note: 'n1', displayNote: '<span class="dot-below">n</span>', key: '2', keyDisplay: '2', whiteKeyIndex: 2 },
+                { number: '3', note: 'r2', displayNote: 'r', key: '4', keyDisplay: '4', whiteKeyIndex: 4 },
+                { number: '4', note: 'g2', displayNote: 'g', key: '5', keyDisplay: '5', whiteKeyIndex: 5 },
+                { number: '5', note: 'M2', displayNote: 'M', key: '7', keyDisplay: '7', whiteKeyIndex: 7 },
+                { number: '6', note: 'd2', displayNote: 'd', key: '8', keyDisplay: '8', whiteKeyIndex: 8 },
+                { number: '7', note: 'n2', displayNote: 'n', key: '9', keyDisplay: '9', whiteKeyIndex: 9 },
+                { number: '8', note: 'r3', displayNote: '<span class="dot-above">r</span>', key: '-', keyDisplay: '-', whiteKeyIndex: 11 },
+                { number: '9', note: 'g3', displayNote: '<span class="dot-above">g</span>', key: '=', keyDisplay: '=', whiteKeyIndex: 12 }
+            ];
+            
+            whiteKeyData.forEach(keyData => {
+                const key = document.createElement('div');
+                key.className = 'white-key';
+                key.dataset.note = keyData.note;
+                key.dataset.key = keyData.key;
+                key.onclick = () => playNote(keyData.note);
+                
+                const numberDiv = document.createElement('div');
+                numberDiv.className = 'key-number';
+                numberDiv.style.color = keyData.color;
+                numberDiv.textContent = keyData.number;
+                
+                const noteDiv = document.createElement('div');
+                noteDiv.className = 'key-note';
+                noteDiv.innerHTML = keyData.displayNote;
+                
+                const bindingDiv = document.createElement('div');
+                bindingDiv.className = 'key-binding';
+                bindingDiv.textContent = keyData.keyDisplay;
+                
+                key.appendChild(numberDiv);
+                key.appendChild(noteDiv);
+                key.appendChild(bindingDiv);
+                
+                whiteKeysContainer.appendChild(key);
+            });
+            
+            blackKeyData.forEach(keyData => {
+                const key = document.createElement('div');
+                key.className = 'black-key';
+                key.style.position = 'absolute';
+                key.style.left = ((keyData.whiteKeyIndex * 56) - 16) + 'px';
+                key.dataset.note = keyData.note;
+                key.dataset.key = keyData.key;
+                key.onclick = () => playNote(keyData.note);
+                
+                const numberDiv = document.createElement('div');
+                numberDiv.className = 'key-number';
+                numberDiv.style.color = 'white';
+                numberDiv.textContent = keyData.number;
+                
+                const noteDiv = document.createElement('div');
+                noteDiv.className = 'key-note';
+                noteDiv.innerHTML = keyData.displayNote;
+                
+                const bindingDiv = document.createElement('div');
+                bindingDiv.className = 'key-binding';
+                bindingDiv.textContent = keyData.keyDisplay;
+                
+                key.appendChild(numberDiv);
+                key.appendChild(noteDiv);
+                key.appendChild(bindingDiv);
+                
+                blackKeysContainer.appendChild(key);
+            });
+        }
+        
+        function playNote(note) {
+            if (!isAudioEnabled) {
+                initAudio();
+            }
+            
+            playAudioNote(note);
+            
+            const keys = document.querySelectorAll(`[data-note="${note}"]`);
+            keys.forEach(key => {
+                key.classList.add('active');
+                setTimeout(() => key.classList.remove('active'), 150);
+            });
+        }
+        
+        document.addEventListener('keydown', function(event) {
+            if (document.getElementById('resultsSection').style.display !== 'block') return;
+            
+            let key = event.key;
+            
+            if (event.code === 'Tab') {
+                event.preventDefault();
+                key = 'Tab';
+            } else {
+                key = key.toLowerCase();
+            }
+            
+            const keyElement = document.querySelector(`[data-key="${key}"]`);
+            
+            if (keyElement) {
+                event.preventDefault();
+                const note = keyElement.dataset.note;
+                playNote(note);
+            }
+        });
+        
+        function convertInputNotation(inputLine) {
+            return inputLine.replace(/([SRGmPDNrgMdn])([123])/g, function(match, letter, octave) {
+                if (octave === '1') {
+                    return '<span class="dot-below">' + letter + '</span>';
+                } else if (octave === '2') {
+                    return letter;
+                } else if (octave === '3') {
+                    return '<span class="dot-above">' + letter + '</span>';
+                }
+                return match;
+            });
+        }
+
+        function openPrintableResult(originalInput, convertedResult) {
+            const newWindow = window.open('', '_blank');
+            
+            const lines = originalInput.trim().split('\n');
+            const resultLines = convertedResult.trim().split('\n');
+            let mergedContent = "";
+            
+            for (let i = 0; i < lines.length; i++) {
+                const inputLine = lines[i] || "";
+                const outputLine = resultLines[i] || "";
+                
+                if (inputLine.trim() !== "") {
+                    const convertedInputLine = convertInputNotation(inputLine);
+                    mergedContent += '<div class="line-pair">';
+                    mergedContent += '<div class="input-line">' + convertedInputLine + '</div>';
+                    mergedContent += '<div class="output-line">' + outputLine + '</div>';
+                    mergedContent += '</div>';
+                }
+            }
+            
+            newWindow.document.write('<!DOCTYPE html>');
+            newWindow.document.write('<html>');
+            newWindow.document.write('<head>');
+            newWindow.document.write('<title>Piano Converter Result</title>');
+            newWindow.document.write('<style>');
+            newWindow.document.write('body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }');
+            newWindow.document.write('h1 { color: #333; text-align: center; margin-bottom: 30px; }');
+            newWindow.document.write('.line-pair { margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9; }');
+            newWindow.document.write('.input-line { font-family: monospace; color: #555; margin-bottom: 8px; line-height: 2; }');
+            newWindow.document.write('.output-line { font-size: 18px; font-weight: bold; }');
+            newWindow.document.write('.dot-above { position: relative; }');
+            newWindow.document.write('.dot-above::before { content: "•"; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 8px; }');
+            newWindow.document.write('.dot-below { position: relative; }');
+            newWindow.document.write('.dot-below::after { content: "•"; position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); font-size: 8px; }');
+            newWindow.document.write('@media print { body { margin: 15px; } .line-pair { break-inside: avoid; } }');
+            newWindow.document.write('</style>');
+            newWindow.document.write('</head>');
+            newWindow.document.write('<body>');
+            newWindow.document.write('<h1>Piano Converter Result</h1>');
+            newWindow.document.write(mergedContent);
+            newWindow.document.write('</body>');
+            newWindow.document.write('</html>');
+            
+            newWindow.document.close();
+        }
+    </script>
+</body>
+</html>
